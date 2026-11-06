@@ -4,14 +4,19 @@
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
   const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   const ABC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const MODES = ["picture", "missing", "scramble", "sentence"];
+  const MODE_TAG = { picture: "🖼️ Picture match", missing: "🧩 Missing letters", scramble: "🔀 Scrambled word", sentence: "📝 Sentence fill" };
+  const similar = (a, b) => (typeof SIMILAR !== "undefined" ? SIMILAR : []).some((g) => g.includes(a) && g.includes(b));
 
   /* ---------- storage ---------- */
   const store = {
     get(k, d) { try { const v = localStorage.getItem("ws4_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem("ws4_" + k, JSON.stringify(v)); } catch (e) {} },
   };
-  const settings = Object.assign({ mode: "mix", count: 10, level: "easy" }, store.get("settings", {}));
+  const settings = Object.assign({ mode: "picture", count: 10, level: "easy" }, store.get("settings", {}));
+  if (![...MODES, "mix"].includes(settings.mode)) settings.mode = "picture";
   let muted = store.get("muted", false);
 
   /* ---------- sound ---------- */
@@ -65,15 +70,18 @@
   /* ---------- home ---------- */
   const bestKey = () => `best_${settings.mode}_${settings.count}_${settings.level}`;
   const LEVEL_NOTES = {
-    easy: "Easy: fewer gaps, and the first letter of each word is given in Scrambled.",
-    hard: "Hard: more gaps + extra decoy letters, and every letter is scrambled.",
+    picture: { easy: "Easy: the Vietnamese meaning is shown and the word is read aloud.", hard: "Hard: only the English word, no Vietnamese, no sound." },
+    missing: { easy: "Easy: a few gaps, and the first letter is always given.", hard: "Hard: more gaps + 3 decoy letters that don't belong." },
+    scramble: { easy: "Easy: the first letter of each word is given.", hard: "Hard: every letter is scrambled." },
+    sentence: { easy: "Easy: a picture clue helps you.", hard: "Hard: no picture, and all choices are the same word type (noun/verb)." },
+    mix: { easy: "Easy: extra clues in every game.", hard: "Hard: fewer clues, decoy letters, no pictures in Sentence Fill." },
   };
   function renderHome() {
     document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("sel", b.dataset.mode === settings.mode));
     document.querySelectorAll(".seg").forEach((seg) => {
       seg.querySelectorAll("button").forEach((b) => b.classList.toggle("sel", String(settings[seg.dataset.key]) === b.dataset.val));
     });
-    $("#levelNote").textContent = LEVEL_NOTES[settings.level];
+    $("#levelNote").textContent = LEVEL_NOTES[settings.mode][settings.level];
     const best = store.get(bestKey(), null);
     $("#bestLine").textContent = best ? `🏆 Your best here: ${best} pts` : "No score yet for this choice. Be the first! ✨";
   }
@@ -104,18 +112,40 @@
   /* ---------- game state ---------- */
   let G = null; // whole game
   let R = null; // current round
+  let lastMode = null;
 
   function startGame(list, n, practice) {
     ac();
     const words = shuffle(list).slice(0, Math.min(n, list.length));
-    words.forEach((w) => { const i = new Image(); i.src = w.img; }); // preload
+    WORDS.forEach((w) => { const i = new Image(); i.src = w.img; }); // preload (Picture Match uses all pictures)
     G = { list: words, i: 0, score: 0, streak: 0, bestStreak: 0, results: [], practice };
+    lastMode = null;
     show("play");
     newRound();
   }
 
+  function chooseMode() {
+    if (settings.mode !== "mix") return settings.mode;
+    lastMode = pick(MODES.filter((m) => m !== lastMode));
+    return lastMode;
+  }
+
+  function distractors(item, n, sameType) {
+    let pool = WORDS.filter((w) => w.w !== item.w && !similar(w.w, item.w));
+    if (sameType) { const same = pool.filter((w) => w.t === item.t); if (same.length >= n) pool = same; }
+    return shuffle(pool).slice(0, n);
+  }
+
   function buildRound(item) {
-    const mode = settings.mode === "mix" ? (Math.random() < 0.5 ? "missing" : "scramble") : settings.mode;
+    const mode = chooseMode();
+    const base = { item, mode, attempts: 0, hints: 0, done: false, won: false, busy: false };
+
+    if (mode === "picture" || mode === "sentence") {
+      const ds = distractors(item, 3, mode === "sentence" && settings.level === "hard");
+      const options = shuffle([item, ...ds]).map((w) => ({ item: w, correct: w === item, state: "" }));
+      return Object.assign(base, { kind: "choice", options });
+    }
+
     const chars = item.w.toUpperCase().split("");
     const letterIdx = chars.map((c, i) => (c === " " ? -1 : i)).filter((i) => i >= 0);
     let hidden;
@@ -138,22 +168,47 @@
     const target = slots.filter((s) => !s.given).map((s) => s.ch).join("");
     for (let t = 0; t < 12 && letters.length > 1 && order.join("") === target; t++) order = shuffle(letters);
     const tiles = order.map((ch, id) => ({ id, ch, used: false }));
-    return { item, mode, slots, tiles, attempts: 0, hints: 0, placed: [], done: false, busy: false, pop: -1 };
+    return Object.assign(base, { kind: "spell", slots, tiles, placed: [], pop: -1 });
   }
 
   function newRound() {
     R = buildRound(G.list[G.i]);
+    const hard = settings.level === "hard";
+    const noImg = R.mode === "picture" || (R.mode === "sentence" && hard);
+    $("#card").className = `card mode-${R.mode} kind-${R.kind}` + (noImg ? " no-img" : "");
+
     const img = $("#pImg");
-    img.style.animation = "none"; void img.offsetWidth; img.style.animation = "";
-    img.src = R.item.img; img.alt = "picture clue";
-    $("#pMode").textContent = R.mode === "missing" ? "🧩 Missing letters" : "🔀 Scrambled word";
+    img.hidden = noImg;
+    if (!noImg) { img.style.animation = "none"; void img.offsetWidth; img.style.animation = ""; img.src = R.item.img; img.alt = "picture clue"; }
+    const pw = $("#pWord"); pw.hidden = !noImg; pw.innerHTML = "";
+    if (R.mode === "picture") {
+      pw.append(el("div", "big", R.item.w), el("div", "sm", `${R.item.t === "v" ? "verb" : "noun"} · ${R.item.ipa}`));
+    } else if (noImg) {
+      pw.append(el("div", "emoji", "📝"), el("div", "sm", "Read the sentence and choose the missing word"));
+    }
+    $("#pMode").textContent = MODE_TAG[R.mode];
+    $("#listenBtn").hidden = R.mode === "sentence";
+
+    const showClue = R.kind === "spell" || (R.mode === "picture" && !hard);
+    $("#clue").hidden = !showClue;
     $("#pType").textContent = R.item.t === "v" ? "verb" : "noun";
     $("#pVi").textContent = R.item.vi;
-    $("#bankWrap").hidden = false;
+
+    $("#pSentence").hidden = R.mode !== "sentence";
+    $("#slots").hidden = R.kind !== "spell";
+    $("#bank").hidden = R.kind !== "spell";
+    $("#choices").hidden = R.kind !== "choice";
+    $("#answerArea").hidden = false;
     $("#feedback").classList.remove("show");
     $("#toast").textContent = "";
     updateHud();
     render();
+    if (R.mode === "picture" && !hard) setTimeout(() => speak(R.item.w), 300);
+  }
+
+  /* ---------- rendering ---------- */
+  function render() {
+    if (R.kind === "spell") renderSpell(); else renderChoices();
   }
 
   function sizeSlots() {
@@ -171,7 +226,7 @@
     document.documentElement.style.setProperty("--tile", t + "px");
   }
 
-  function render() {
+  function renderSpell() {
     const { slots, tiles } = R;
     const box = $("#slots"); box.innerHTML = "";
     const nextIdx = R.done ? -1 : slots.findIndex((s) => !s.given && s.tile === null);
@@ -204,6 +259,35 @@
     sizeSlots();
   }
 
+  function renderChoices() {
+    const box = $("#choices"); box.innerHTML = "";
+    box.className = "choices " + (R.mode === "picture" ? "pics" : "words");
+    R.options.forEach((o, i) => {
+      const b = el("button", "choice");
+      if (o.state) b.classList.add(o.state);
+      if (R.done && !o.correct && o.state !== "wrong") b.classList.add("dim");
+      b.appendChild(el("span", "num", String(i + 1)));
+      if (R.mode === "picture") {
+        const im = el("img"); im.src = o.item.img; im.alt = "picture " + (i + 1); b.appendChild(im);
+        if (R.done) b.appendChild(el("span", "cap", o.item.w));
+      } else {
+        b.appendChild(el("span", "txt", o.item.w));
+      }
+      if (R.done || o.state) b.disabled = true;
+      b.addEventListener("click", () => choose(i));
+      box.appendChild(b);
+    });
+
+    if (R.mode === "sentence") {
+      const [a, b] = R.item.s.split("___");
+      const p = $("#pSentence"); p.innerHTML = "";
+      const blank = R.done
+        ? el("span", "blank filled " + (R.won ? "ok" : "rev"), a.trim() ? R.item.w : cap(R.item.w))
+        : el("span", "blank");
+      p.append(document.createTextNode(a), blank, document.createTextNode(b));
+    }
+  }
+
   function updateHud() {
     const n = G.list.length;
     $("#pFill").style.width = ((G.i + (R && R.done ? 1 : 0)) / n) * 100 + "%";
@@ -214,14 +298,14 @@
   }
   function bump(sel) { const e = $(sel); e.classList.remove("bump"); void e.offsetWidth; e.classList.add("bump"); }
 
-  /* ---------- actions ---------- */
+  /* ---------- spelling actions ---------- */
   function freeSlot(i) {
     const s = R.slots[i]; if (s.tile === null) return;
     R.tiles[s.tile].used = false; s.tile = null; s.state = ""; s.locked = false;
     R.placed = R.placed.filter((x) => x !== i);
   }
   function place(id) {
-    if (R.done || R.busy) return;
+    if (R.kind !== "spell" || R.done || R.busy) return;
     const t = R.tiles[id]; if (t.used) return;
     const i = R.slots.findIndex((s) => !s.given && s.tile === null); if (i < 0) return;
     R.slots[i].tile = id; R.slots[i].state = ""; t.used = true; R.placed.push(i); R.pop = i;
@@ -229,16 +313,16 @@
     sfx.tap(); render(); maybeCheck();
   }
   function unplace(i) {
-    if (R.done || R.busy) return;
+    if (R.kind !== "spell" || R.done || R.busy) return;
     const s = R.slots[i]; if (s.tile === null || s.locked) return;
     freeSlot(i); sfx.back(); render();
   }
   function undo() {
-    if (R.done || R.busy) return;
+    if (R.kind !== "spell" || R.done || R.busy) return;
     for (let j = R.placed.length - 1; j >= 0; j--) { const i = R.placed[j]; if (!R.slots[i].locked) { unplace(i); return; } }
   }
   function clearAll() {
-    if (R.done || R.busy) return;
+    if (R.kind !== "spell" || R.done || R.busy) return;
     R.slots.forEach((s, i) => { if (!s.locked) freeSlot(i); });
     sfx.back(); render();
   }
@@ -262,8 +346,7 @@
         : "Last try! Tap 💡 Hint if you need help.";
     }, 800);
   }
-  function hint() {
-    if (R.done || R.busy) return;
+  function spellHint() {
     const i = R.slots.findIndex((s) => !s.given && (s.tile === null || R.tiles[s.tile].ch !== s.ch));
     if (i < 0) return;
     const need = R.slots[i].ch;
@@ -277,17 +360,42 @@
     R.slots[i].tile = t.id; R.slots[i].locked = true; t.used = true; R.placed.push(i); R.pop = i;
     R.hints++; sfx.hint(); render(); maybeCheck();
   }
+
+  /* ---------- choice actions ---------- */
+  function choose(i) {
+    if (R.kind !== "choice" || R.done || R.busy) return;
+    const o = R.options[i]; if (!o || o.state) return;
+    if (o.correct) { o.state = "right"; success(); return; }
+    o.state = "wrong"; R.attempts++; G.streak = 0;
+    sfx.bad(); render(); updateHud();
+    if (R.attempts >= 2) { R.busy = true; setTimeout(() => { R.busy = false; reveal(); }, 700); }
+    else $("#toast").textContent = "Not that one! Try again 💪";
+  }
+  function choiceHint() {
+    const left = R.options.filter((o) => !o.correct && !o.state);
+    if (left.length <= 1) { $("#toast").textContent = "No more hints, you can do it! 💪"; return; }
+    pick(left).state = "gone";
+    R.hints++; sfx.hint(); $("#toast").textContent = ""; render();
+  }
+
+  function hint() {
+    if (R.done || R.busy) return;
+    if (R.kind === "spell") spellHint(); else choiceHint();
+  }
+
+  /* ---------- round end ---------- */
   function success() {
-    R.done = true; R.busy = false;
-    const base = [10, 6, 3][Math.min(R.attempts, 2)];
+    R.done = true; R.won = true; R.busy = false;
+    const base = R.kind === "choice" ? [10, 5][Math.min(R.attempts, 1)] : [10, 6, 3][Math.min(R.attempts, 2)];
     let pts = Math.max(1, base - R.hints * 2);
     G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak);
     const bonus = G.streak >= 3 ? 2 : 0;
     pts += bonus; G.score += pts;
-    R.slots.forEach((s) => { if (!s.space) s.state = "right"; });
+    if (R.kind === "spell") R.slots.forEach((s) => { if (!s.space) s.state = "right"; });
     const perfect = R.attempts === 0 && R.hints === 0;
     G.results.push({ item: R.item, ok: true, perfect, pts });
-    sfx.good(); confetti(perfect ? 90 : 45); setTimeout(() => speak(R.item.w), 250);
+    sfx.good(); confetti(perfect ? 90 : 45);
+    setTimeout(() => speak(R.mode === "sentence" ? R.item.s.replace("___", R.item.w) : R.item.w), 250);
     render(); updateHud(); bump("#pScore");
     showFeedback(perfect ? pick(["Perfect! 🌟", "Brilliant! 🎉", "Amazing! 🚀", "Superstar! ⭐"]) : pick(["Nice work! 👍", "You got it! ✅", "Well done! 😊"]), "good",
       `+${pts} points` + (bonus ? ` · 🔥 streak bonus` : ""));
@@ -295,7 +403,8 @@
   function reveal() {
     if (R.done) return;
     R.done = true; R.busy = false;
-    R.slots.forEach((s, i) => { if (!s.given) { if (s.tile !== null) freeSlot(i); s.state = "revealed"; } });
+    if (R.kind === "spell") R.slots.forEach((s, i) => { if (!s.given) { if (s.tile !== null) freeSlot(i); s.state = "revealed"; } });
+    else R.options.forEach((o) => { if (o.correct) o.state = "answer"; });
     G.streak = 0;
     G.results.push({ item: R.item, ok: false, perfect: false, pts: 0 });
     setTimeout(() => speak(R.item.w), 150);
@@ -303,10 +412,11 @@
     showFeedback("Here's the answer 👀", "miss", "");
   }
   function showFeedback(title, cls, pts) {
-    $("#bankWrap").hidden = true;
+    $("#answerArea").hidden = true;
     const t = $("#fbTitle"); t.textContent = title; t.className = "fb-title " + cls;
     $("#fbWord").textContent = R.item.w;
     $("#fbIpa").textContent = R.item.ipa;
+    $("#fbVi").textContent = R.mode === "sentence" ? "🇻🇳 " + R.item.sv : R.kind === "choice" ? "🇻🇳 " + R.item.vi : "";
     $("#fbPts").textContent = pts;
     $("#nextBtn").textContent = G.i + 1 >= G.list.length ? "See results 🏁" : "Next ➜";
     $("#feedback").classList.add("show");
@@ -324,7 +434,7 @@
   $("#skipBtn").addEventListener("click", () => { if (!R.done && !R.busy) reveal(); });
   $("#nextBtn").addEventListener("click", next);
   $("#listenBtn").addEventListener("click", () => speak(R.item.w));
-  $("#quitBtn").addEventListener("click", () => { speechSynthesis && speechSynthesis.cancel(); show("home"); });
+  $("#quitBtn").addEventListener("click", () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); show("home"); });
   const muteBtn = $("#muteBtn");
   const paintMute = () => (muteBtn.textContent = muted ? "🔇" : "🔊");
   muteBtn.addEventListener("click", () => { muted = !muted; store.set("muted", muted); paintMute(); });
@@ -333,13 +443,14 @@
   document.addEventListener("keydown", (e) => {
     if (!$("#play").classList.contains("active") || !R || e.metaKey || e.ctrlKey || e.altKey) return;
     if (R.done) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); next(); } return; }
+    if (R.kind === "choice") { if (/^[1-4]$/.test(e.key)) choose(Number(e.key) - 1); return; }
     if (e.key === "Backspace") { e.preventDefault(); undo(); return; }
     if (/^[a-z]$/i.test(e.key)) {
       const t = R.tiles.find((x) => !x.used && x.ch === e.key.toUpperCase());
       if (t) place(t.id); else { const b = $("#bank"); b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); }
     }
   });
-  window.addEventListener("resize", () => { if (R && $("#play").classList.contains("active")) sizeSlots(); });
+  window.addEventListener("resize", () => { if (R && R.kind === "spell" && $("#play").classList.contains("active")) sizeSlots(); });
 
   /* ---------- results ---------- */
   let lastTricky = [];
@@ -359,7 +470,7 @@
     let isBest = false;
     if (!G.practice) {
       const prev = store.get(bestKey(), 0);
-      if (G.score > prev) { store.set(bestKey(), G.score); isBest = prev > 0 || G.score > 0; }
+      if (G.score > prev) { store.set(bestKey(), G.score); isBest = G.score > 0; }
     }
     $("#rBest").hidden = !isBest;
 

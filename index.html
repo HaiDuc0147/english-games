@@ -28,12 +28,16 @@
   <header class="hero">
     <div class="badge">UNIT 4 · MUSIC &amp; ARTS</div>
     <h1>Word <span>Studio</span></h1>
-    <p class="sub">Fill in missing letters &amp; unscramble words · 20 words</p>
+    <p class="sub">4 games · 20 words · learn, spell &amp; use them</p>
   </header>
 
   <div class="panel">
     <div class="label">Choose a game</div>
     <div class="modes">
+      <button class="mode" data-mode="picture">
+        <div class="emo">🖼️</div>
+        <div><h3>Picture Match <span class="warm">warm-up</span></h3><p>Read the word, tap the right picture</p></div>
+      </button>
       <button class="mode" data-mode="missing">
         <div class="emo">🧩</div>
         <div><h3>Missing Letters</h3><p>Fill the gaps: <b>P_PP_T</b></p></div>
@@ -42,9 +46,13 @@
         <div class="emo">🔀</div>
         <div><h3>Scrambled Word</h3><p>Put letters in order: <b>TRECNOC</b></p></div>
       </button>
+      <button class="mode" data-mode="sentence">
+        <div class="emo">📝</div>
+        <div><h3>Sentence Fill</h3><p>Choose the word for the gap: <b>I ___ folk music.</b></p></div>
+      </button>
       <button class="mode" data-mode="mix">
         <div class="emo">🎲</div>
-        <div><h3>Mix Both</h3><p>A surprise every word!</p></div>
+        <div><h3>Mix All</h3><p>All 4 games, a surprise every word!</p></div>
       </button>
     </div>
 
@@ -70,7 +78,7 @@
     <button class="btn-ghost" id="studyBtn">📖 Study the words first</button>
     <p class="best" id="bestLine"></p>
   </div>
-  <p class="foot">Tip: you can type on a keyboard too · ⌫ to undo · Enter for next</p>
+  <p class="foot">Tip: on a keyboard, type letters or press 1–4 to choose · ⌫ undo · Enter = next</p>
 </section>
 
 <!-- STUDY -->
@@ -98,22 +106,25 @@
   </div>
 
   <div class="card" id="card">
-    <div class="pic">
+    <div class="pic" id="pic">
       <span class="tag" id="pMode">🧩 Missing letters</span>
       <button class="listen" id="listenBtn" aria-label="Listen">🔊</button>
       <img id="pImg" alt="">
+      <div class="pic-word" id="pWord" hidden></div>
     </div>
     <div class="body">
-      <div class="clue"><span class="type" id="pType">n.</span><span class="vi" id="pVi"></span></div>
+      <div class="clue" id="clue"><span class="type" id="pType">n.</span><span class="vi" id="pVi"></span></div>
+      <div class="sentence" id="pSentence" hidden></div>
       <div class="slots" id="slots"></div>
+      <div class="choices" id="choices" hidden></div>
 
-      <div id="bankWrap">
+      <div id="answerArea">
         <div class="bank" id="bank"></div>
         <div class="toast" id="toast"></div>
         <div class="actions">
           <button class="chip-btn" id="hintBtn">💡 Hint <small>(−2)</small></button>
-          <button class="chip-btn" id="undoBtn">⌫ Undo</button>
-          <button class="chip-btn" id="clearBtn">↺ Clear</button>
+          <button class="chip-btn spell-only" id="undoBtn">⌫ Undo</button>
+          <button class="chip-btn spell-only" id="clearBtn">↺ Clear</button>
           <button class="chip-btn muted" id="skipBtn">🏳️ Show answer</button>
         </div>
       </div>
@@ -122,6 +133,7 @@
         <div class="fb-title" id="fbTitle"></div>
         <div class="fb-word" id="fbWord"></div>
         <div class="fb-ipa" id="fbIpa"></div>
+        <div class="fb-vi" id="fbVi"></div>
         <div class="fb-pts" id="fbPts"></div>
         <button class="btn-next" id="nextBtn">Next ➜</button>
       </div>
