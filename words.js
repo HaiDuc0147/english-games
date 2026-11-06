@@ -1,0 +1,23 @@
+// Unit 4 – Music and Arts. Edit this list to make a new game (put pictures in images/).
+const WORDS = [
+  { w: "anthem",             t: "n", ipa: "/ˈænθəm/",                 vi: "bài quốc ca",                                img: "images/anthem.jpg" },
+  { w: "character",          t: "n", ipa: "/ˈkærəktə/",               vi: "nhân vật (trong phim, tác phẩm văn học…)",   img: "images/character.jpg" },
+  { w: "compose",            t: "v", ipa: "/kəmˈpəʊz/",               vi: "soạn, biên soạn",                            img: "images/compose.jpg" },
+  { w: "composer",           t: "n", ipa: "/kəmˈpəʊzə/",              vi: "nhà soạn nhạc, nhạc sĩ",                     img: "images/composer.jpg" },
+  { w: "concert",            t: "n", ipa: "/ˈkɒnsət/",                vi: "buổi hoà nhạc",                              img: "images/concert.jpg" },
+  { w: "control",            t: "v", ipa: "/kənˈtrəʊl/",              vi: "điều khiển",                                 img: "images/control.jpg" },
+  { w: "country music",      t: "n", ipa: "/ˈkʌntri mjuːzɪk/",        vi: "nhạc đồng quê",                              img: "images/country_music.jpg" },
+  { w: "exhibition",         t: "n", ipa: "/ˌeksɪˈbɪʃn/",             vi: "cuộc triển lãm",                             img: "images/exhibition.jpg" },
+  { w: "folk music",         t: "n", ipa: "/ˈfəʊk mjuːzɪk/",          vi: "nhạc dân gian, nhạc truyền thống",           img: "images/folk_music.jpg" },
+  { w: "gallery",            t: "n", ipa: "/ˈɡæləri/",                vi: "phòng triển lãm tranh",                      img: "images/gallery.jpg" },
+  { w: "musical instrument", t: "n", ipa: "/ˌmjuːzɪkl ˈɪnstrəmənt/",  vi: "nhạc cụ",                                    img: "images/musical_instrument.jpg" },
+  { w: "originate",          t: "v", ipa: "/əˈrɪdʒɪneɪt/",            vi: "bắt nguồn, xuất phát từ",                    img: "images/originate.jpg" },
+  { w: "perform",            t: "v", ipa: "/pəˈfɔːm/",                vi: "biểu diễn, trình diễn",                      img: "images/perform.jpg" },
+  { w: "performance",        t: "n", ipa: "/pəˈfɔːməns/",             vi: "sự trình diễn, buổi biểu diễn",              img: "images/performance.jpg" },
+  { w: "photography",        t: "n", ipa: "/fəˈtɒɡrəfi/",             vi: "nhiếp ảnh",                                  img: "images/photography.jpg" },
+  { w: "portrait",           t: "n", ipa: "/ˈpɔːtreɪt/",              vi: "bức chân dung",                              img: "images/portrait.jpg" },
+  { w: "prefer",             t: "v", ipa: "/prɪˈfɜː/",                vi: "thích hơn",                                  img: "images/prefer.jpg" },
+  { w: "puppet",             t: "n", ipa: "/ˈpʌpɪt/",                 vi: "con rối",                                    img: "images/puppet.jpg" },
+  { w: "sculpture",          t: "n", ipa: "/ˈskʌlptʃə/",              vi: "điêu khắc, tác phẩm điêu khắc",              img: "images/sculpture.jpg" },
+  { w: "water puppetry",     t: "n", ipa: "/ˈwɔːtə ˈpʌpɪtri/",        vi: "múa rối nước",                               img: "images/water_puppetry.jpg" },
+];

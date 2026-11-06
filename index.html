@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word Studio · Unit 4 Music &amp; Arts</title>
+<meta name="description" content="Practise Unit 4 Music & Arts vocabulary with Missing Letters and Scrambled Words.">
+<meta name="theme-color" content="#6d28d9">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="floaty" aria-hidden="true">
+  <span style="left:6%;top:12%;animation-delay:0s">🎵</span>
+  <span style="left:84%;top:8%;animation-delay:-3s">🎨</span>
+  <span style="left:90%;top:58%;animation-delay:-6s">🎻</span>
+  <span style="left:4%;top:66%;animation-delay:-2s">🎭</span>
+  <span style="left:48%;top:90%;animation-delay:-8s">📷</span>
+  <span style="left:70%;top:32%;animation-delay:-5s">🎶</span>
+  <span style="left:22%;top:38%;animation-delay:-9s">🖼️</span>
+</div>
+
+<!-- HOME -->
+<section id="home" class="screen active">
+  <header class="hero">
+    <div class="badge">UNIT 4 · MUSIC &amp; ARTS</div>
+    <h1>Word <span>Studio</span></h1>
+    <p class="sub">Fill in missing letters &amp; unscramble words · 20 words</p>
+  </header>
+
+  <div class="panel">
+    <div class="label">Choose a game</div>
+    <div class="modes">
+      <button class="mode" data-mode="missing">
+        <div class="emo">🧩</div>
+        <div><h3>Missing Letters</h3><p>Fill the gaps: <b>P_PP_T</b></p></div>
+      </button>
+      <button class="mode" data-mode="scramble">
+        <div class="emo">🔀</div>
+        <div><h3>Scrambled Word</h3><p>Put letters in order: <b>TRECNOC</b></p></div>
+      </button>
+      <button class="mode" data-mode="mix">
+        <div class="emo">🎲</div>
+        <div><h3>Mix Both</h3><p>A surprise every word!</p></div>
+      </button>
+    </div>
+
+    <div class="row2">
+      <div>
+        <div class="label">Words</div>
+        <div class="seg" data-key="count">
+          <button data-val="10">10</button>
+          <button data-val="20">All 20</button>
+        </div>
+      </div>
+      <div>
+        <div class="label">Level</div>
+        <div class="seg" data-key="level">
+          <button data-val="easy">😊 Easy</button>
+          <button data-val="hard">🔥 Hard</button>
+        </div>
+      </div>
+    </div>
+    <p class="level-note" id="levelNote"></p>
+
+    <button class="btn-primary" id="startBtn">▶ Start</button>
+    <button class="btn-ghost" id="studyBtn">📖 Study the words first</button>
+    <p class="best" id="bestLine"></p>
+  </div>
+  <p class="foot">Tip: you can type on a keyboard too · ⌫ to undo · Enter for next</p>
+</section>
+
+<!-- STUDY -->
+<section id="study" class="screen">
+  <div class="topbar">
+    <button class="icon-btn" data-go="home" aria-label="Back">←</button>
+    <h2>Study the words</h2>
+    <span class="hint-txt">Tap a card to listen 🔊</span>
+  </div>
+  <div class="study-grid" id="studyGrid"></div>
+  <button class="btn-primary sticky" id="studyStart">I'm ready, let's play ▶</button>
+</section>
+
+<!-- PLAY -->
+<section id="play" class="screen">
+  <div class="hud">
+    <button class="icon-btn" id="quitBtn" aria-label="Quit">✕</button>
+    <div class="progress">
+      <div class="bar"><div class="fill" id="pFill"></div></div>
+      <div class="count" id="pCount">Word 1 / 10</div>
+    </div>
+    <div class="pill streak" id="pStreak" hidden>🔥 0</div>
+    <div class="pill" id="pScore">⭐ 0</div>
+    <button class="icon-btn" id="muteBtn" aria-label="Sound">🔊</button>
+  </div>
+
+  <div class="card" id="card">
+    <div class="pic">
+      <span class="tag" id="pMode">🧩 Missing letters</span>
+      <button class="listen" id="listenBtn" aria-label="Listen">🔊</button>
+      <img id="pImg" alt="">
+    </div>
+    <div class="body">
+      <div class="clue"><span class="type" id="pType">n.</span><span class="vi" id="pVi"></span></div>
+      <div class="slots" id="slots"></div>
+
+      <div id="bankWrap">
+        <div class="bank" id="bank"></div>
+        <div class="toast" id="toast"></div>
+        <div class="actions">
+          <button class="chip-btn" id="hintBtn">💡 Hint <small>(−2)</small></button>
+          <button class="chip-btn" id="undoBtn">⌫ Undo</button>
+          <button class="chip-btn" id="clearBtn">↺ Clear</button>
+          <button class="chip-btn muted" id="skipBtn">🏳️ Show answer</button>
+        </div>
+      </div>
+
+      <div class="feedback" id="feedback">
+        <div class="fb-title" id="fbTitle"></div>
+        <div class="fb-word" id="fbWord"></div>
+        <div class="fb-ipa" id="fbIpa"></div>
+        <div class="fb-pts" id="fbPts"></div>
+        <button class="btn-next" id="nextBtn">Next ➜</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULT -->
+<section id="result" class="screen">
+  <div class="panel result">
+    <div class="stars" id="rStars"></div>
+    <h2 id="rTitle">Great job!</h2>
+    <div class="big-score" id="rScore">0</div>
+    <div class="new-best" id="rBest" hidden>🏆 New best score!</div>
+    <div class="stats">
+      <div class="stat"><b id="rCorrect">0</b><span>Correct</span></div>
+      <div class="stat"><b id="rFirst">0</b><span>First try</span></div>
+      <div class="stat"><b id="rStreak">0</b><span>Best streak 🔥</span></div>
+    </div>
+    <div class="rbtns">
+      <button class="btn-primary" id="againBtn">↻ Play again</button>
+      <button class="btn-ghost" id="practiceBtn">🎯 Practise tricky words</button>
+      <button class="btn-ghost" data-go="home">🏠 Home</button>
+    </div>
+    <div class="label left">Your words</div>
+    <div class="review" id="rList"></div>
+  </div>
+</section>
+
+<canvas id="confetti" aria-hidden="true"></canvas>
+<script src="words.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
