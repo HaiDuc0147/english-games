@@ -8,15 +8,26 @@
   const ABC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const MODES = ["picture", "missing", "scramble", "sentence"];
   const MODE_TAG = { picture: "🖼️ Picture match", missing: "🧩 Missing letters", scramble: "🔀 Scrambled word", sentence: "📝 Sentence fill" };
-  const similar = (a, b) => (typeof SIMILAR !== "undefined" ? SIMILAR : []).some((g) => g.includes(a) && g.includes(b));
+  const TYPE = { n: "noun", v: "verb", adj: "adjective" };
+  const typeName = (t) => TYPE[t] || "word";
+  let SET = SETS[0];
+  let WORDS = SET.words;
+  const similar = (a, b) => (SET.similar || []).some((g) => g.includes(a) && g.includes(b));
 
   /* ---------- storage ---------- */
   const store = {
     get(k, d) { try { const v = localStorage.getItem("ws4_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem("ws4_" + k, JSON.stringify(v)); } catch (e) {} },
   };
-  const settings = Object.assign({ mode: "picture", count: 10, level: "easy" }, store.get("settings", {}));
+  const settings = Object.assign({ mode: "picture", count: 10, level: "easy", set: SETS[0].id }, store.get("settings", {}));
   if (![...MODES, "mix"].includes(settings.mode)) settings.mode = "picture";
+  if (settings.count !== 10) settings.count = "all";
+  const wordCount = () => (settings.count === "all" ? WORDS.length : Math.min(settings.count, WORDS.length));
+  function useSet(id) {
+    SET = SETS.find((s) => s.id === id) || SETS[0];
+    WORDS = SET.words; settings.set = SET.id; store.set("settings", settings);
+    try { history.replaceState(null, "", "?lesson=" + SET.id); } catch (e) {}
+  }
   let muted = store.get("muted", false);
 
   /* ---------- sound ---------- */
@@ -64,11 +75,12 @@
     document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("active", s.id === id));
     window.scrollTo(0, 0);
     if (id === "home") renderHome();
+    if (id === "lessons") { renderLessons(); try { history.replaceState(null, "", location.pathname); } catch (e) {} }
   }
   document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => show(b.dataset.go)));
 
   /* ---------- home ---------- */
-  const bestKey = () => `best_${settings.mode}_${settings.count}_${settings.level}`;
+  const bestKey = () => `best_${SET.id}_${settings.mode}_${settings.count}_${settings.level}`;
   const LEVEL_NOTES = {
     picture: { easy: "Easy: the Vietnamese meaning is shown and the word is read aloud.", hard: "Hard: only the English word, no Vietnamese, no sound." },
     missing: { easy: "Easy: a few gaps, and the first letter is always given.", hard: "Hard: more gaps + 3 decoy letters that don't belong." },
@@ -76,7 +88,41 @@
     sentence: { easy: "Easy: a picture clue helps you.", hard: "Hard: no picture, and all choices are the same word type (noun/verb)." },
     mix: { easy: "Easy: extra clues in every game.", hard: "Hard: fewer clues, decoy letters, no pictures in Sentence Fill." },
   };
+  function renderLessons() {
+    const box = $("#lessonList"); box.innerHTML = "";
+    const grades = [...new Set(SETS.map((s) => s.grade))].sort((a, b) => a - b);
+    grades.forEach((g) => {
+      box.appendChild(el("h2", "grade-head", `Grade ${g}`));
+      const grid = el("div", "lesson-grid");
+      SETS.filter((s) => s.grade === g).forEach((s) => {
+        const c = el("button", "lesson" + (s.id === settings.set ? " last" : ""));
+        c.style.setProperty("--c", s.color || "#7c3aed");
+        const cover = el("div", "cover"); const im = el("img"); im.src = s.cover || s.words[0].img; im.alt = ""; cover.appendChild(im);
+        cover.appendChild(el("span", "cover-emoji", s.emoji || "📚"));
+        const info = el("div", "info");
+        const chips = el("div", "chips");
+        chips.append(el("span", "chip grade", `Grade ${s.grade}`), el("span", "chip", `Unit ${s.unit}`));
+        if (s.id === settings.set) chips.appendChild(el("span", "chip last-chip", "Last played"));
+        let best = 0;
+        try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith(`ws4_best_${s.id}_`)) best = Math.max(best, Number(localStorage.getItem(k)) || 0); } } catch (e) {}
+        info.append(chips, el("h3", null, s.title), el("div", "vi", s.vi),
+          el("div", "meta", `${s.words.length} words` + (best ? ` · 🏆 best ${best} pts` : "")));
+        c.append(cover, info, el("span", "go", "➜"));
+        c.addEventListener("click", () => { useSet(s.id); sfx.tap(); show("home"); });
+        grid.appendChild(c);
+      });
+      box.appendChild(grid);
+    });
+  }
+
   function renderHome() {
+    $("#setBadge").textContent = `GRADE ${SET.grade} · UNIT ${SET.unit}`;
+    $("#setTitle").textContent = `${SET.emoji || ""} ${SET.title}`.trim();
+    $("#setSub").textContent = `${SET.vi} · ${WORDS.length} words · 4 games`;
+    $("#exMissing").textContent = SET.ex ? SET.ex.missing : "";
+    $("#exScramble").textContent = SET.ex ? SET.ex.scramble : "";
+    $("#exSentence").textContent = SET.ex ? SET.ex.sentence : "";
+    $("#allBtn").textContent = `All ${WORDS.length}`;
     document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("sel", b.dataset.mode === settings.mode));
     document.querySelectorAll(".seg").forEach((seg) => {
       seg.querySelectorAll("button").forEach((b) => b.classList.toggle("sel", String(settings[seg.dataset.key]) === b.dataset.val));
@@ -87,16 +133,17 @@
   }
   document.querySelectorAll(".mode").forEach((b) => b.addEventListener("click", () => { settings.mode = b.dataset.mode; store.set("settings", settings); sfx.tap(); renderHome(); }));
   document.querySelectorAll(".seg").forEach((seg) => seg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-    const k = seg.dataset.key; settings[k] = k === "count" ? Number(b.dataset.val) : b.dataset.val;
+    const k = seg.dataset.key; settings[k] = k === "count" ? (b.dataset.val === "all" ? "all" : Number(b.dataset.val)) : b.dataset.val;
     store.set("settings", settings); sfx.tap(); renderHome();
   })));
-  $("#startBtn").addEventListener("click", () => startGame(WORDS, settings.count, false));
+  $("#startBtn").addEventListener("click", () => startGame(WORDS, wordCount(), false));
   $("#studyBtn").addEventListener("click", () => { renderStudy(); show("study"); });
-  $("#studyStart").addEventListener("click", () => startGame(WORDS, settings.count, false));
+  $("#studyStart").addEventListener("click", () => startGame(WORDS, wordCount(), false));
 
   /* ---------- study ---------- */
   function renderStudy() {
-    const g = $("#studyGrid"); if (g.childElementCount) return;
+    const g = $("#studyGrid"); if (g.dataset.set === SET.id) return;
+    g.innerHTML = ""; g.dataset.set = SET.id;
     WORDS.forEach((it) => {
       const c = el("button", "scard");
       const im = el("div", "im"); const img = el("img"); img.src = it.img; img.alt = it.w; img.loading = "lazy"; im.appendChild(img);
@@ -182,7 +229,7 @@
     if (!noImg) { img.style.animation = "none"; void img.offsetWidth; img.style.animation = ""; img.src = R.item.img; img.alt = "picture clue"; }
     const pw = $("#pWord"); pw.hidden = !noImg; pw.innerHTML = "";
     if (R.mode === "picture") {
-      pw.append(el("div", "big", R.item.w), el("div", "sm", `${R.item.t === "v" ? "verb" : "noun"} · ${R.item.ipa}`));
+      pw.append(el("div", "big", R.item.w), el("div", "sm", `${typeName(R.item.t)} · ${R.item.ipa}`));
     } else if (noImg) {
       pw.append(el("div", "emoji", "📝"), el("div", "sm", "Read the sentence and choose the missing word"));
     }
@@ -191,7 +238,7 @@
 
     const showClue = R.kind === "spell" || (R.mode === "picture" && !hard);
     $("#clue").hidden = !showClue;
-    $("#pType").textContent = R.item.t === "v" ? "verb" : "noun";
+    $("#pType").textContent = typeName(R.item.t);
     $("#pVi").textContent = R.item.vi;
 
     $("#pSentence").hidden = R.mode !== "sentence";
@@ -491,7 +538,7 @@
     show("result");
     if (stars >= 2) { sfx.win(); confetti(160); }
   }
-  $("#againBtn").addEventListener("click", () => startGame(G.practice ? G.list : WORDS, G.practice ? G.list.length : settings.count, G.practice));
+  $("#againBtn").addEventListener("click", () => startGame(G.practice ? G.list : WORDS, G.practice ? G.list.length : wordCount(), G.practice));
   $("#practiceBtn").addEventListener("click", () => startGame(lastTricky, lastTricky.length, true));
 
   /* ---------- confetti ---------- */
@@ -523,5 +570,7 @@
     raf = parts.length ? requestAnimationFrame(tick) : (cx.clearRect(0, 0, cv.width, cv.height), 0);
   }
 
-  renderHome();
+  const param = new URLSearchParams(location.search).get("lesson");
+  if (param && SETS.some((s) => s.id === param)) { useSet(param); show("home"); }
+  else { SET = SETS.find((s) => s.id === settings.set) || SETS[0]; WORDS = SET.words; show("lessons"); }
 })();
