@@ -26,7 +26,6 @@
   function useSet(id) {
     SET = SETS.find((s) => s.id === id) || SETS[0];
     WORDS = SET.words; settings.set = SET.id; store.set("settings", settings);
-    try { history.replaceState(null, "", "?lesson=" + SET.id); } catch (e) {}
   }
   let muted = store.get("muted", false);
 
@@ -71,13 +70,54 @@
   }
 
   /* ---------- screens ---------- */
+  /* ---------- routing: /<root>/ = lessons, /<root>/<lesson>/ = menu, /<root>/<lesson>/<screen> ---------- */
+  const ROOT = new URL(document.baseURI).pathname.replace(/[^/]*$/, "");
+  const DEPTH = { lessons: 0, home: 1, study: 2, play: 2, result: 2 };
+  const SUB = ["study", "play", "result"];
+  let current = "lessons";
+  const pathFor = (screen) => (screen === "lessons" ? ROOT : ROOT + SET.id + "/" + (screen === "home" ? "" : screen));
+  const stateFor = (screen) => ({ app: "ws", screen, set: SET.id, depth: DEPTH[screen] });
+  function parseRoute(path) {
+    let rest = path.startsWith(ROOT) ? path.slice(ROOT.length) : "";
+    const [id, sub] = rest.replace(/index\.html$/, "").split("/").filter(Boolean);
+    const set = SETS.find((s) => s.id === id);
+    if (!set) return { screen: "lessons" };
+    return { set: set.id, screen: SUB.includes(sub) ? sub : "home" };
+  }
+  function setHistory(mode, screen) {
+    try {
+      if (mode === "push") history.pushState(stateFor(screen), "", pathFor(screen));
+      else history.replaceState(stateFor(screen), "", pathFor(screen));
+    } catch (e) {}
+  }
+  // In-app navigation: deeper = new history entry, same level = replace, going up = real "Back".
+  function go(screen) {
+    const from = DEPTH[current], to = DEPTH[screen];
+    const st = history.state;
+    if (to < from && st && st.app === "ws" && st.depth === from) { history.go(to - from); return; }
+    setHistory(to > from ? "push" : "replace", screen);
+    show(screen);
+  }
+  window.addEventListener("popstate", (e) => {
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    let st = e.state && e.state.app === "ws" ? e.state : parseRoute(location.pathname);
+    if (st.set) useSet(st.set);
+    let screen = st.screen || "lessons";
+    if ((screen === "play" || screen === "result") && !(G && G.set === SET.id && (screen === "play" ? R && !G.finished : G.finished))) {
+      screen = "home"; setHistory("replace", screen);
+    }
+    show(screen);
+  });
+
   function show(id) {
+    current = id;
+    if (id === "study") renderStudy();
     document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("active", s.id === id));
     window.scrollTo(0, 0);
     if (id === "home") renderHome();
-    if (id === "lessons") { renderLessons(); try { history.replaceState(null, "", location.pathname); } catch (e) {} }
+    if (id === "lessons") renderLessons();
   }
-  document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => show(b.dataset.go)));
+  document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
 
   /* ---------- home ---------- */
   const bestKey = () => `best_${SET.id}_${settings.mode}_${settings.count}_${settings.level}`;
@@ -108,7 +148,7 @@
         info.append(chips, el("h3", null, s.title), el("div", "vi", s.vi),
           el("div", "meta", `${s.words.length} words` + (best ? ` · 🏆 best ${best} pts` : "")));
         c.append(cover, info, el("span", "go", "➜"));
-        c.addEventListener("click", () => { useSet(s.id); sfx.tap(); show("home"); });
+        c.addEventListener("click", () => { useSet(s.id); sfx.tap(); go("home"); });
         grid.appendChild(c);
       });
       box.appendChild(grid);
@@ -137,7 +177,7 @@
     store.set("settings", settings); sfx.tap(); renderHome();
   })));
   $("#startBtn").addEventListener("click", () => startGame(WORDS, wordCount(), false));
-  $("#studyBtn").addEventListener("click", () => { renderStudy(); show("study"); });
+  $("#studyBtn").addEventListener("click", () => go("study"));
   $("#studyStart").addEventListener("click", () => startGame(WORDS, wordCount(), false));
 
   /* ---------- study ---------- */
@@ -165,9 +205,9 @@
     ac();
     const words = shuffle(list).slice(0, Math.min(n, list.length));
     WORDS.forEach((w) => { const i = new Image(); i.src = w.img; }); // preload (Picture Match uses all pictures)
-    G = { list: words, i: 0, score: 0, streak: 0, bestStreak: 0, results: [], practice };
+    G = { list: words, i: 0, score: 0, streak: 0, bestStreak: 0, results: [], practice, set: SET.id, finished: false };
     lastMode = null;
-    show("play");
+    go("play");
     newRound();
   }
 
@@ -481,7 +521,7 @@
   $("#skipBtn").addEventListener("click", () => { if (!R.done && !R.busy) reveal(); });
   $("#nextBtn").addEventListener("click", next);
   $("#listenBtn").addEventListener("click", () => speak(R.item.w));
-  $("#quitBtn").addEventListener("click", () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); show("home"); });
+  $("#quitBtn").addEventListener("click", () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); go("home"); });
   const muteBtn = $("#muteBtn");
   const paintMute = () => (muteBtn.textContent = muted ? "🔇" : "🔊");
   muteBtn.addEventListener("click", () => { muted = !muted; store.set("muted", muted); paintMute(); });
@@ -535,7 +575,8 @@
       row.append(img, tx, st);
       list.appendChild(row);
     });
-    show("result");
+    G.finished = true;
+    go("result");
     if (stars >= 2) { sfx.win(); confetti(160); }
   }
   $("#againBtn").addEventListener("click", () => startGame(G.practice ? G.list : WORDS, G.practice ? G.list.length : wordCount(), G.practice));
@@ -570,7 +611,18 @@
     raf = parts.length ? requestAnimationFrame(tick) : (cx.clearRect(0, 0, cv.width, cv.height), 0);
   }
 
-  const param = new URLSearchParams(location.search).get("lesson");
-  if (param && SETS.some((s) => s.id === param)) { useSet(param); show("home"); }
-  else { SET = SETS.find((s) => s.id === settings.set) || SETS[0]; WORDS = SET.words; show("lessons"); }
+  // Boot: accept /<lesson>/ paths (via 404.html → ?p=), old ?lesson= links, or the plain start page.
+  const qs = new URLSearchParams(location.search);
+  let route = qs.has("p") ? parseRoute(ROOT + qs.get("p").replace(/^\/+/, "")) : parseRoute(location.pathname);
+  if (route.screen === "lessons" && SETS.some((s) => s.id === qs.get("lesson"))) route = { set: qs.get("lesson"), screen: "home" };
+  if (route.set) {
+    useSet(route.set);
+    setHistory("replace", "lessons"); // so Back from the menu goes to the lesson list, not off the site
+    setHistory("push", "home");
+    show("home");
+  } else {
+    SET = SETS.find((s) => s.id === settings.set) || SETS[0]; WORDS = SET.words;
+    setHistory("replace", "lessons");
+    show("lessons");
+  }
 })();

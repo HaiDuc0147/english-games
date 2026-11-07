@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Keep relative links (pictures, scripts) pointing at the site root even on /<lesson>/ URLs.
+  (function () { var b = document.createElement("base"); b.href = location.pathname.replace(/[^\/]*$/, ""); document.head.appendChild(b); })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Word Studio · English vocabulary games</title>
 <meta name="description" content="Vocabulary games for Grade 7 and Grade 8 English: Picture Match, Missing Letters, Scrambled Word and Sentence Fill.">
@@ -10,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <div class="floaty" aria-hidden="true">
@@ -176,7 +180,7 @@
 </section>
 
 <canvas id="confetti" aria-hidden="true"></canvas>
-<script src="words.js?v=3"></script>
-<script src="game.js?v=3"></script>
+<script src="words.js?v=4"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

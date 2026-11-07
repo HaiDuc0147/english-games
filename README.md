@@ -7,10 +7,12 @@ One-player vocabulary games for Grade 7 and Grade 8 English lessons.
 ## Lessons
 | Grade | Unit | Topic | Words | Direct link |
 |---|---|---|---|---|
-| 7 | 4 | Music and Arts | 20 | [?lesson=g7u4](https://haiduc0147.github.io/english-games/?lesson=g7u4) |
-| 8 | 4 | Ethnic Groups of Viet Nam | 22 | [?lesson=g8u4](https://haiduc0147.github.io/english-games/?lesson=g8u4) |
+| 7 | 4 | Music and Arts | 20 | [/g7u4/](https://haiduc0147.github.io/english-games/g7u4/) |
+| 8 | 4 | Ethnic Groups of Viet Nam | 22 | [/g8u4/](https://haiduc0147.github.io/english-games/g8u4/) |
 
-The start screen lists every lesson by grade. A direct link opens one lesson straight away, so a class only sees its own words.
+The start screen lists every lesson by grade. A direct link (`/english-games/<lesson>/`) opens one lesson straight away, so a class only sees its own words. Old `?lesson=` links still work.
+
+The browser / phone **Back** button moves back through the screens: game → game menu → lesson list. (`404.html` makes the `/<lesson>/` links work on GitHub Pages.)
 
 ## Games
 - 🖼️ **Picture Match** (warm-up): read the word, tap the right picture out of 4.
@@ -35,6 +37,6 @@ Best scores are saved on the device, per lesson.
 ## Add a new lesson
 1. Put one picture per word in a new folder, e.g. `images/g8-u5/`.
 2. In `words.js`, copy one lesson block inside `SETS` and change `id`, `grade`, `unit`, `title`, `vi`, `emoji`, `color`, `cover`, the examples in `ex`, the `words` (word, type, IPA, meaning, picture, sentence with `___`, Vietnamese sentence) and the `similar` groups.
-3. Bump the `?v=` number on the three file links in `index.html`, then push.
+3. Bump the `?v=` number on the three file links in `index.html`, then push. The new lesson gets its own link `/english-games/<id>/` automatically.
 
 Pictures are clipart and photos from the web, used for classroom teaching only.

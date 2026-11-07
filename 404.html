@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Word Studio</title>
+<script>
+  // GitHub Pages serves this page for unknown paths like /english-games/g8u4/.
+  // Send the visitor to the app with the path in ?p=, and the app shows the right lesson
+  // and puts the clean URL back in the address bar.
+  (function () {
+    var segs = location.pathname.split("/");
+    var root = /\.github\.io$/.test(location.hostname) ? "/" + segs[1] + "/" : "/";
+    var rest = location.pathname.slice(root.length);
+    location.replace(root + (rest ? "?p=" + encodeURIComponent(rest) : "") + location.hash);
+  })();
+</script>
+</head>
+<body></body>
+</html>
