@@ -253,9 +253,9 @@ h1 span{background:linear-gradient(90deg,#fde68a,#fbcfe8 60%,#c4b5fd);-webkit-ba
 .lesson .vi{color:var(--muted);font-weight:600;font-size:14px;margin-top:2px}
 .lesson .meta{font-size:13px;font-weight:700;margin-top:8px;color:#475569}
 .lesson .go{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
-.hero.small{padding-top:4px}
+.hero.small{position:relative;padding-top:56px}
 .hero.small h1{font-size:clamp(32px,7.5vw,50px);margin-top:10px}
-.back-link{display:inline-block;margin-bottom:12px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#fff;font-weight:700;font-size:14px;padding:7px 14px;border-radius:999px;cursor:pointer}
+.back-link{position:absolute;left:0;top:0;display:inline-block;margin:0;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#fff;font-weight:700;font-size:14px;padding:7px 14px;border-radius:999px;cursor:pointer}
 .back-link:hover{background:rgba(255,255,255,.24)}
 .hero.small .badge{display:table;margin:0 auto}
 @media (max-width:600px){
